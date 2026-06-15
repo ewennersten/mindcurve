@@ -1,0 +1,73 @@
+#!/bin/bash
+# Startar om Mindcurve LAN-servern från noll varje gång appen körs:
+# stänger ev. gammal server (även hängda processer som håller port 3000),
+# bygger spelet och startar nytt. Servern öppnar webbläsaren själv när den är uppe.
+#
+# Robust mot macOS "App Translocation": Finder kan köra en osignerad app från en
+# slumpad temp-kopia, vilket gör att $0-relativa sökvägar pekar fel. Därför
+# används projektets absoluta sökväg i första hand, med $0-relativt som reserv
+# om hela projektet flyttats.
+
+# Finder-startade processer har minimal PATH; lägg till de vanliga node-platserna
+export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.nvm/current/bin:$PATH"
+
+# 1) Känd absolut sökväg (immun mot translocation). Uppdatera om du flyttar projektet.
+HARDCODED="/Users/eliaswennersten/Documents/Elias/Utveckling/Achtung"
+# 2) Reserv: härled från appens placering (funkar om projektet flyttats men inte translocerats)
+RELATIVE="$(cd "$(dirname "$0")/../../.." 2>/dev/null && pwd)"
+
+DIR=""
+for candidate in "$HARDCODED" "$RELATIVE"; do
+  if [ -n "$candidate" ] && [ -f "$candidate/package.json" ]; then
+    DIR="$candidate"
+    break
+  fi
+done
+
+if [ -z "$DIR" ]; then
+  osascript -e 'display alert "Starta Mindcurve LAN" message "Hittade inte projektmappen. Öppna run-filen i appen och uppdatera sökvägen HARDCODED till var Achtung-mappen ligger."'
+  exit 1
+fi
+
+LOG="$DIR/lan-server.log"
+URL="http://localhost:3000/"
+
+if ! command -v npm >/dev/null 2>&1; then
+  osascript -e 'display alert "Starta Mindcurve LAN" message "Hittade inte npm/node. Installera Node.js (t.ex. via Homebrew) och försök igen."'
+  exit 1
+fi
+
+# ── Stäng ner allt gammalt ──────────────────────────────────────
+pkill -f "tsx server/index.ts" 2>/dev/null
+# Döda även vad som än håller port 3000 (t.ex. en hängd process)
+PORT_PID="$(lsof -ti tcp:3000 2>/dev/null)"
+[ -n "$PORT_PID" ] && kill $PORT_PID 2>/dev/null
+for _ in $(seq 1 10); do
+  lsof -ti tcp:3000 >/dev/null 2>&1 || break
+  sleep 0.3
+done
+PORT_PID="$(lsof -ti tcp:3000 2>/dev/null)"
+if [ -n "$PORT_PID" ]; then
+  kill -9 $PORT_PID 2>/dev/null
+  sleep 0.5
+fi
+
+# ── Starta färskt ───────────────────────────────────────────────
+cd "$DIR" || {
+  osascript -e "display alert \"Starta Mindcurve LAN\" message \"Kunde inte gå till projektmappen $DIR.\""
+  exit 1
+}
+echo "── $(date) — omstart (projekt: $DIR) ──" > "$LOG"
+nohup npm run lan >> "$LOG" 2>&1 &
+
+# Vänta tills servern svarar (bygget tar några sekunder).
+# Servern öppnar själv webbläsaren när den är uppe.
+for _ in $(seq 1 80); do
+  sleep 0.5
+  if curl -s -o /dev/null --max-time 1 "$URL"; then
+    exit 0
+  fi
+done
+
+osascript -e 'display alert "Starta Mindcurve LAN" message "Servern verkar inte ha startat. Titta i lan-server.log i projektmappen för detaljer."'
+exit 1
