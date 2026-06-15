@@ -1,6 +1,7 @@
 import type { AudioDirector } from '../audio/director'
 import type { GameSettings, PowerUpType, ViewState } from '../game/state'
 import type { Keyboard } from '../input/keyboard'
+import { isTouchDevice, TouchControls } from '../input/touch'
 import type { Renderer } from '../render/canvas'
 import type { Hud } from '../ui/hud'
 import { createBotLevelSlider, createPowerUpToggles, createShrinkSelect, createTargetSelect } from '../ui/lobby'
@@ -33,6 +34,8 @@ export class NetSession {
   private view: ViewState | null = null
   private lastSent = { left: false, right: false }
   private errorText = ''
+  /** Touch-knappar för telefon — finns bara på touch-enheter (aldrig lokalt). */
+  private touch: TouchControls | null = null
 
   constructor(
     private keyboard: Keyboard,
@@ -45,6 +48,9 @@ export class NetSession {
   }
 
   start(): void {
+    // Skapa touch-knapparna först när en LAN-session faktiskt startar, så att en
+    // telefon i lokalt läge aldrig ens får touch-DOM i sidan.
+    if (!this.touch && isTouchDevice()) this.touch = new TouchControls()
     this.active = true
     this.phase = 'connecting'
     this.view = null
@@ -68,6 +74,7 @@ export class NetSession {
   stop(): void {
     this.active = false
     this.el.hidden = true
+    this.touch?.disable()
     this.hud.hide()
     this.audio.reset()
     this.ws?.close()
@@ -78,6 +85,7 @@ export class NetSession {
   private fail(text: string): void {
     this.phase = 'error'
     this.errorText = text
+    this.touch?.disable()
     this.hud.hide()
     this.el.hidden = false
     this.renderLobby()
@@ -112,6 +120,7 @@ export class NetSession {
           if (this.phase === 'game') this.audio.reset()
           this.phase = 'lobby'
           this.view = null
+          this.touch?.disable()
           this.hud.hide()
           this.el.hidden = false
           this.renderLobby()
@@ -121,6 +130,7 @@ export class NetSession {
         if (this.phase === 'lobby' || this.phase === 'connecting') {
           this.phase = 'game'
           this.el.hidden = true
+          this.touch?.enable()
           this.hud.show()
           this.renderer.clearTrails()
         }
@@ -138,8 +148,8 @@ export class NetSession {
     if (this.phase === 'game' && this.view) {
       // Styrning: piltangenter eller A/S — skicka bara vid förändring
       const input = {
-        left: this.keyboard.isDown('ArrowLeft') || this.keyboard.isDown('KeyA'),
-        right: this.keyboard.isDown('ArrowRight') || this.keyboard.isDown('KeyS'),
+        left: this.keyboard.isDown('ArrowLeft') || this.keyboard.isDown('KeyA') || !!this.touch?.left,
+        right: this.keyboard.isDown('ArrowRight') || this.keyboard.isDown('KeyS') || !!this.touch?.right,
       }
       if (input.left !== this.lastSent.left || input.right !== this.lastSent.right) {
         this.lastSent = input

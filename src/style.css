@@ -772,3 +772,115 @@ kbd {
   color: var(--ink-dim);
   text-align: right;
 }
+
+/* ── Mobil / touch (endast LAN på telefon) ───────────
+   Elementen #touch-controls och #rotate-hint skapas av TouchControls bara på
+   touch-enheter, så reglerna nedan kan aldrig påverka lokalt delad-skärm-spel. */
+
+#touch-controls {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 1.4rem max(1.4rem, env(safe-area-inset-bottom));
+  pointer-events: none; /* bara själva knapparna fångar tryck */
+}
+
+.touch-btn {
+  pointer-events: auto;
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 50%;
+  font-size: 2rem;
+  color: var(--ink);
+  background: oklch(0.2 0.02 300 / 0.45);
+  border: 2px solid var(--line);
+  backdrop-filter: blur(4px);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 0.06s ease,
+    background 0.06s ease;
+}
+
+.touch-btn.active {
+  background: oklch(0.66 0.17 50 / 0.8); /* Mindcamp-orange */
+  transform: scale(0.93);
+}
+
+#rotate-hint {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  background: var(--bg);
+  color: var(--ink);
+  text-align: center;
+}
+
+#rotate-hint p {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+}
+
+#rotate-hint .rotate-emoji {
+  font-size: 3.5rem;
+  animation: rotate-nudge 1.8s ease-in-out infinite;
+}
+
+@keyframes rotate-nudge {
+  0%,
+  55%,
+  100% {
+    transform: rotate(0);
+  }
+  75% {
+    transform: rotate(90deg);
+  }
+}
+
+/* I liggande behövs inget tips — då är 16:9-arenan i rätt riktning. */
+@media (orientation: landscape) {
+  #rotate-hint {
+    display: none !important;
+  }
+}
+
+/* Telefonlayout: spelplanen fyller skärmen, sidopanelen göms (servern driver
+   rundorna i auto-läge så poängpanelen behövs inte på styrenheten). Klassen
+   .mobile-lan sätts av TouchControls.enable() — alltså bara LAN på touch. */
+.mobile-lan {
+  overscroll-behavior: none;
+}
+
+.mobile-lan #game {
+  padding: 0;
+  gap: 0;
+}
+
+.mobile-lan #sidebar {
+  display: none;
+}
+
+.mobile-lan #stage {
+  max-width: none;
+  width: 100%;
+}
+
+.mobile-lan #field {
+  touch-action: none;
+}
+
+/* Mute hamnar annars under höger touch-knapp — flytta upp i hörnet. */
+.mobile-lan #mute {
+  top: max(0.6rem, env(safe-area-inset-top));
+  bottom: auto;
+}

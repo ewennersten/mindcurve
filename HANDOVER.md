@@ -178,14 +178,41 @@ Hela dagens bygge, ungefär i ordning:
     skriptkörning: en kvarglömd gammal server på :3000 svarar `full` efter
     4 spelare — pkill:a innan.*
 
+## Gjort 2026-06-15
+
+- **Mobilanpassad LAN-klient** (prio 3-punkten "telefon"): en telefon som öppnar
+  nätverks-URL:en blir en egen LAN-spelare med touch-styrning.
+  - `src/input/touch.ts` (ny): `TouchControls` ritar två håll-knappar (◀/▶,
+    oberoende pekarmål så att båda kan hållas → 🔫-kanon + 📐-svängar funkar) och
+    ett "Vrid telefonen"-tips. `isTouchDevice()` = primär pekare grov
+    (`(pointer: coarse)`) eller `maxTouchPoints > 0`.
+  - **Kravet (touch ALDRIG i lokalt läge):** `TouchControls` skapas lazy i
+    `NetSession.start()` — som bara körs i LAN. Lokalt spel rör aldrig
+    nätsessionen, så touch-DOM finns inte ens i sidan då. Verifierat negativt
+    för både desktop-LAN och touch-enhet i lokalt läge.
+  - `src/net/client.ts`: OR:ar in `touch.left/right` i input-läsningen
+    (`update()`), enable/disable vid fasväxling.
+  - Mobil-layout drivs av klassen `.mobile-lan` på `<body>` (sätts av
+    `enable()`), INTE av en `(pointer: coarse)`-media query — knytningen blir
+    exakt till LAN-touch och funkar pålitligt även under testemulering. Döljer
+    sidopanelen, fullskärm, flyttar mute-knappen. Vrid-tipset styrs av en
+    `@media (orientation: …)`-regel.
+  - `index.html`: viewport-metan låst (`maximum-scale=1, user-scalable=no,
+    viewport-fit=cover`) mot pinch-zoom + notch.
+  - Verifierat: `scripts/verify-mobile.mjs` (kräver `npm run lan`) — touch-
+    emulerad telefon får knappar + tips, kan styra (liveness via skärmdumps-
+    diff), och desktop/lokalt förblir touch-fria. Skärmdumpar:
+    `verify-shots/mobile-1-game.png`, `mobile-2-rotate.png`. 42 enhetstester +
+    `tsc` fortsatt gröna (kärnan orörd).
+
 ## Game Designer-listan — vad som är KVAR
 
 Prio 1 och prio 2 är HELT klara. Kvarstår:
 
 ### Prio 3
-- **Telefon som handkontroll** — nätklienten skickar redan bara `{left, right}`.
-  Touch-vy med två knappytor = nästan gratis och stort partyvärde. *Nedprioriterad
-  från rekommendation 2026-06-12, tas senare.*
+- **Telefon som egen LAN-enhet** — KLAR 2026-06-15 (se nedan). En telefon som
+  ansluter över LAN är nu en egen spelare med touch-styrning. Touch dyker
+  medvetet ALDRIG upp i lokalt läge (Elias krav) — bara som egen enhet i LAN.
 - **Lagläge (2v2)** — poäng/rundslutslogik + lobbyval.
 - **Rund-mutatorer** — var 3:e runda (seedat) en modifierare (dubbel fart, inga
   luckor, permanent wrap). Billig variation av befintliga parametrar.
