@@ -9,6 +9,8 @@ export interface LobbyPlayer {
   slot: number
   name: string
   ready: boolean
+  /** Valfri emoji vid masken */
+  avatar?: string
   /** Botspelare som kör på servern — alltid redo */
   bot?: boolean
 }
@@ -36,6 +38,7 @@ export type ServerMsg =
 
 export type ClientMsg =
   | { t: 'name'; name: string }
+  | { t: 'avatar'; avatar: string }
   | { t: 'ready'; ready: boolean }
   | { t: 'input'; left: boolean; right: boolean }
   | { t: 'powerups'; enabled: boolean }

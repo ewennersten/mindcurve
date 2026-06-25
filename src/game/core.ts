@@ -1,5 +1,5 @@
 import { SegmentGrid, segCircleHit } from './collision'
-import { ESCAPE_GHOST_TICKS, checkPowerUpPickups, spawnPowerUp } from './powerups'
+import { ESCAPE_GHOST_TICKS, agePowerUps, checkPowerUpPickups, spawnPowerUp } from './powerups'
 import { Rng } from './rng'
 import {
   type GameSettings,
@@ -19,6 +19,8 @@ import {
 export interface PlayerSetup {
   name: string
   color: string
+  /** Valfri emoji vid huvudet — tom/utelämnad = standardprick */
+  avatar?: string
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100
@@ -60,6 +62,7 @@ export function pickView(g: GameState): ViewState {
     mines: g.mines.map((m) => ({ ...m, x: r2(m.x), y: r2(m.y) })),
     bullets: g.bullets.map((b) => ({ ...b, x: r2(b.x), y: r2(b.y), angle: Math.round(b.angle * 1000) / 1000 })),
     freshHoles: g.freshHoles,
+    freshPickups: g.freshPickups,
     freshTrail: g.freshTrail.map((f) => ({
       playerId: f.playerId,
       x1: r2(f.x1),
@@ -71,6 +74,7 @@ export function pickView(g: GameState): ViewState {
     players: g.players.map((p) => ({
       name: p.name,
       color: p.color,
+      avatar: p.avatar,
       x: r2(p.x),
       y: r2(p.y),
       angle: Math.round(p.angle * 1000) / 1000,
@@ -90,6 +94,7 @@ export function createGame(setups: PlayerSetup[], seed: number, settings: GameSe
     id: i,
     name: s.name,
     color: s.color,
+    avatar: s.avatar ?? '',
     x: 0,
     y: 0,
     angle: 0,
@@ -124,6 +129,7 @@ export function createGame(setups: PlayerSetup[], seed: number, settings: GameSe
     wallInset: 0,
     roundTick: 0,
     freshHoles: [],
+    freshPickups: [],
     targetScore: resolveTargetScore(setups.length, settings.targetScore),
     rng: new Rng(seed),
     nextId: 1,
@@ -262,6 +268,7 @@ export function step(state: GameState, inputs: PlayerInput[]): void {
   state.tick++
   state.freshTrail = []
   state.freshHoles = []
+  state.freshPickups = []
   state.flags.clearedTrails = false
 
   if (state.phase === 'countdown') {
@@ -501,6 +508,9 @@ export function step(state: GameState, inputs: PlayerInput[]): void {
   for (const m of state.mines) {
     if (m.armIn > 0) m.armIn--
   }
+
+  // Power-ups åldras och despawn:ar (självdör tyst) så planen inte fylls
+  agePowerUps(state)
 
   // Power-up-spawning
   if (state.settings.powerupsEnabled && state.powerups.length < MAX_POWERUPS) {

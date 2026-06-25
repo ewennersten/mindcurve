@@ -57,7 +57,7 @@ Servern kör hela simuleringen; klienterna skickar bara inputs och ritar.
 - Först till poängmålet — med ensam ledning — vinner matchen. Målet väljs i lobbyn:
   **Auto** (`10 × (antal spelare − 1)`) eller ett fast antal poäng.
 - Spåren har slumpmässiga luckor som går att smita igenom.
-- **Sudden death**: efter inställd tid (standard 2 min, väljs i lobbyn under
+- **Sudden death**: efter inställd tid (standard 30 s, väljs i lobbyn under
   "Krympning", kan stängas av) börjar väggarna krypa inåt med pulserande
   varningsram och larm — försiktiga cirklare tvingas mötas.
 - Kill feed visar vem som dog av vad ("Röd kraschade i Gröns spår"), och varje
@@ -84,7 +84,7 @@ Ringfärgen visar vem som påverkas: **grön** = du själv, **röd** = motstånd
 | 🧹 | Rensar alla spår |
 | 🌀 | Öppna väggar — wrap-around en stund |
 | 🍺 | Öl — skärmen gungar för alla i några sekunder |
-| ![logo](logo/mindcamp_logo.png) | **Mindcamp-stjärnan** — som stjärnan i Mario Kart, trumfar allt: odödlig i 4 s, spår du kör igenom sprängs och väggarna wrappar dig till andra sidan. |
+| ![logo](logo/mindcamp_logo.png) | **Mindcamp-stjärnan** — som stjärnan i Mario Kart, trumfar allt: blixtsnabb och odödlig, spår du kör igenom sprängs och väggarna wrappar dig till andra sidan. Ditt spår pulserar och musiken växlar till en rusande stjärnloop så länge den varar. |
 
 Varje power-up har sin egen ljudeffekt, och kanonen låter både när den plockas,
 avfyras (pew!) och när hålet sprängs.

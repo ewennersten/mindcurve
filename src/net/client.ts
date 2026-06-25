@@ -29,7 +29,7 @@ export class NetSession {
   private disabledPowerups: PowerUpType[] = []
   private botLevel = 3
   private target: GameSettings['targetScore'] = 'auto'
-  private shrink: GameSettings['shrinkAfterSec'] = 120
+  private shrink: GameSettings['shrinkAfterSec'] = 30
   private inGame = false
   private view: ViewState | null = null
   private lastSent = { left: false, right: false }
@@ -63,6 +63,7 @@ export class NetSession {
     this.ws = ws
     ws.onopen = () => {
       this.send({ t: 'name', name: this.myName() })
+      this.send({ t: 'avatar', avatar: this.myAvatar() })
     }
     ws.onmessage = (ev) => this.onMessage(JSON.parse(ev.data as string) as ServerMsg)
     ws.onerror = () => this.fail('Ingen LAN-server hittades. Starta värden med  npm run lan  och öppna adressen den skriver ut.')
@@ -93,6 +94,10 @@ export class NetSession {
 
   private myName(): string {
     return localStorage.getItem('achtung-name') || 'Spelare'
+  }
+
+  private myAvatar(): string {
+    return localStorage.getItem('achtung-avatar') || ''
   }
 
   private send(msg: ClientMsg): void {
@@ -214,7 +219,8 @@ export class NetSession {
       dot.className = 'dot'
       const nameEl = document.createElement('span')
       nameEl.className = 'p-name'
-      nameEl.textContent = p.name + (p.slot === this.mySlot ? ' (du)' : '')
+      const face = p.avatar ? `${p.avatar} ` : ''
+      nameEl.textContent = face + p.name + (p.slot === this.mySlot ? ' (du)' : '')
       const status = document.createElement('span')
       status.className = 'p-score net-ready'
       status.textContent = p.bot ? '🤖' : p.ready ? 'REDO' : '…'
@@ -260,6 +266,18 @@ export class NetSession {
       this.send({ t: 'name', name })
     })
 
+    const avatarInput = document.createElement('input')
+    avatarInput.className = 'avatar-input'
+    avatarInput.maxLength = 8
+    avatarInput.placeholder = '🙂'
+    avatarInput.value = this.myAvatar()
+    avatarInput.title = 'Valfri emoji vid din mask'
+    avatarInput.addEventListener('input', () => {
+      const avatar = avatarInput.value.trim()
+      localStorage.setItem('achtung-avatar', avatar)
+      this.send({ t: 'avatar', avatar })
+    })
+
     const setting = document.createElement('label')
     setting.className = 'setting'
     const cb = document.createElement('input')
@@ -286,7 +304,7 @@ export class NetSession {
     info.className = 'target-info'
     info.textContent = 'Matchen startar när alla är redo. Styr med ← → eller A/S — skjut 🔫 med båda samtidigt.'
 
-    foot.append(nameInput, setting, targetSetting, shrinkSetting, info, readyBtn)
+    foot.append(nameInput, avatarInput, setting, targetSetting, shrinkSetting, info, readyBtn)
     this.el.append(foot)
 
     if (this.powerups) {

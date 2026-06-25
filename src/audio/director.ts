@@ -6,7 +6,6 @@ interface PrevSnapshot {
   phase: Phase
   countNum: number
   alive: boolean[]
-  powerups: Map<number, PowerUpType>
   bulletIds: Set<number>
   wrapActive: boolean
   shrinking: boolean
@@ -23,6 +22,8 @@ export class AudioDirector {
   private music = new MusicLoop(this.engine)
   private prev: PrevSnapshot | null = null
   private roundTicks = 0
+  /** Spelar stjärnloopen just nu (någon har Mindcamp-stjärnan) */
+  private starActive = false
 
   unlock(): void {
     this.engine.unlock()
@@ -39,7 +40,9 @@ export class AudioDirector {
   /** Anropas när man lämnar spelet (till lobbyn) eller en nätverkssession. */
   reset(): void {
     this.music.stop()
+    this.music.setStarMode(false)
     this.prev = null
+    this.starActive = false
   }
 
   setMusicPaused(paused: boolean): void {
@@ -64,6 +67,13 @@ export class AudioDirector {
       })
     }
 
+    // Stjärnläge: byt till den rusande stjärnloopen medan någon bär stjärnan
+    const starNow = v.phase === 'playing' && v.players.some((p) => p.alive && p.effects.some((e) => e.type === 'star'))
+    if (starNow !== this.starActive) {
+      this.starActive = starNow
+      this.music.setStarMode(starNow)
+    }
+
     if (v.phase === 'countdown') {
       const num = Math.ceil(v.countdown / TPS)
       if (num !== prev.countNum && num > 0) this.beep()
@@ -85,10 +95,9 @@ export class AudioDirector {
       })
       for (let i = 0; i < deaths; i++) this.crash(this.engine.now() + i * 0.07)
 
-      const currentIds = new Set(v.powerups.map((p) => p.id))
-      for (const [id, type] of prev.powerups) {
-        if (!currentIds.has(id)) this.pickup(type)
-      }
+      // Plock-ljud direkt ur spelhändelserna — en despawn:ad power-up ger ingen
+      // freshPickup-händelse, så självdöden låter (riktigt nog) ingenting.
+      for (const ev of v.freshPickups) this.pickup(ev.type)
 
       // Nya kulor = någon sköt; sprängda hål = träff
       for (const b of v.bullets) {
@@ -105,7 +114,6 @@ export class AudioDirector {
       phase: v.phase,
       countNum: Math.ceil(v.countdown / TPS),
       alive: v.players.map((p) => p.alive),
-      powerups: new Map(v.powerups.map((p) => [p.id, p.type])),
       bulletIds: new Set(v.bullets.map((b) => b.id)),
       wrapActive: v.wrapTicks > 0,
       shrinking: v.wallInset > 0,

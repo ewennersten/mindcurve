@@ -15,6 +15,8 @@ export interface PlayerConfig {
   binding: KeyBinding
   /** Botstyrd — ignorerar tangentbordet, får input från botInput() */
   bot: boolean
+  /** Valfri emoji som visas vid masken i stället för standardpricken */
+  avatar: string
 }
 
 const TARGET_CHOICES: GameSettings['targetScore'][] = ['auto', 5, 10, 15, 20, 30, 50]
@@ -138,6 +140,8 @@ interface Slot {
   /** Platsen är en botspelare */
   bot: boolean
   name: string
+  /** Valfri emoji vid masken */
+  avatar: string
   binding: KeyBinding
   /** 'left' | 'right' när vi väntar på en ny tangent för den sidan */
   remapping: 'left' | 'right' | null
@@ -154,7 +158,7 @@ export class Lobby {
   private botLevel = DEFAULT_BOT_LEVEL
   private disabledPowerups: PowerUpType[] = []
   private targetScore: GameSettings['targetScore'] = 'auto'
-  private shrinkAfterSec: GameSettings['shrinkAfterSec'] = 120
+  private shrinkAfterSec: GameSettings['shrinkAfterSec'] = 30
 
   constructor(private keyboard: Keyboard) {
     this.el = document.getElementById('lobby')!
@@ -162,6 +166,7 @@ export class Lobby {
       joined: i === 0, // första spelaren är med från start så skärmen inte är tom
       bot: false,
       name: SLOT_NAMES[i],
+      avatar: '',
       binding: { ...b },
       remapping: null,
       error: null,
@@ -207,6 +212,7 @@ export class Lobby {
       color: PLAYER_COLORS[this.slots.indexOf(s)],
       binding: s.binding,
       bot: s.bot,
+      avatar: s.avatar.trim(),
     }))
     this.onStart(
       players,
@@ -349,6 +355,7 @@ export class Lobby {
         slot.joined = true
         slot.bot = true
         slot.name = BOT_NAMES[i % BOT_NAMES.length]
+        slot.avatar = '🤖'
         this.render()
       })
       div.append(botBtn)
@@ -378,11 +385,23 @@ export class Lobby {
         slot.joined = false
         slot.bot = false
         slot.name = SLOT_NAMES[i]
+        slot.avatar = ''
         this.render()
       })
       div.append(swatch, name, tag, remove)
       return div
     }
+
+    // Valfri avatar-emoji som ritas vid masken (OS-emojiväljaren funkar i fältet)
+    const avatar = document.createElement('input')
+    avatar.className = 'avatar-input'
+    avatar.value = slot.avatar
+    avatar.maxLength = 8
+    avatar.placeholder = '🙂'
+    avatar.title = 'Valfri emoji vid din mask — lämna tomt för standardprick'
+    avatar.addEventListener('input', () => {
+      slot.avatar = avatar.value.trim()
+    })
 
     const keys = document.createElement('div')
     keys.className = 'keys'
@@ -411,7 +430,7 @@ export class Lobby {
       this.render()
     })
 
-    div.append(swatch, name, keys, leave)
+    div.append(swatch, name, avatar, keys, leave)
     if (slot.error) {
       const err = document.createElement('p')
       err.className = 'slot-error'

@@ -3,3 +3,7 @@ dist/
 verify-shots/
 lan-server.log
 .DS_Store
+
+# Lokal AI-/designkontext — versioneras inte
+CLAUDE.md
+.impeccable.md

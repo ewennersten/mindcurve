@@ -62,6 +62,8 @@ const WOBBLE_MAX = TPS * 14
 const DARK_DURATION = TPS * 6
 const DARK_MAX = TPS * 12
 export const CANNON_AMMO = 3
+/** Hur länge en oupplockad power-up ligger kvar innan den självdör (despawn) */
+export const POWERUP_TTL = TPS * 12
 /** Ticks innan en aptered mina är skarp */
 export const MINE_ARM_TICKS = Math.round(TPS * 1.5)
 /** Kort spöke efter platsbyte/sköldräddning så man hinner ur det främmande spåret */
@@ -151,9 +153,16 @@ export function spawnPowerUp(state: GameState): void {
       return dx * dx + dy * dy < 90 * 90
     })
     if (!tooClose) {
-      state.powerups.push({ id: state.nextId++, type, x, y })
+      state.powerups.push({ id: state.nextId++, type, x, y, ttl: POWERUP_TTL })
       return
     }
+  }
+}
+
+/** Åldra power-ups och despawn:a utgångna (de självdör tyst — ingen plock-VFX). */
+export function agePowerUps(state: GameState): void {
+  for (let i = state.powerups.length - 1; i >= 0; i--) {
+    if (--state.powerups[i].ttl <= 0) state.powerups.splice(i, 1)
   }
 }
 
@@ -167,6 +176,7 @@ export function checkPowerUpPickups(state: GameState, p: PlayerState): void {
     if (dx * dx + dy * dy < hit * hit) {
       state.powerups.splice(i, 1)
       p.matchStats.powerups++
+      state.freshPickups.push({ type: pu.type, x: pu.x, y: pu.y, by: p.id })
       applyPowerUp(state, p, pu.type)
     }
   }

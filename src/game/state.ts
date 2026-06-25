@@ -92,6 +92,19 @@ export interface PowerUpItem {
   type: PowerUpType
   x: number
   y: number
+  /** Ticks kvar tills den självdör om ingen plockat den (despawn) */
+  ttl: number
+}
+
+/** En power-up som plockades upp denna tick — konsumeras av renderaren/ljudet
+ *  för plock-VFX och -ljud. Skiljer plock från despawn (utgången ttl), så att
+ *  en självdöd power-up inte råkar trigga plockeffekten. */
+export interface PickupEvent {
+  type: PowerUpType
+  x: number
+  y: number
+  /** Vilken spelare som plockade — ger partiklarna rätt färg */
+  by: number
 }
 
 export interface Segment {
@@ -126,6 +139,8 @@ export interface PlayerState {
   id: number
   name: string
   color: string
+  /** Valfri emoji som ritas vid maskens huvud i stället för standardpricken */
+  avatar: string
   x: number
   y: number
   angle: number
@@ -204,6 +219,7 @@ export interface GameState {
   /** Tick sedan rundan började spelas (driver krympningen) */
   roundTick: number
   freshHoles: Hole[]
+  freshPickups: PickupEvent[]
   targetScore: number
   rng: Rng
   nextId: number
@@ -219,6 +235,8 @@ export interface GameState {
 export interface ViewPlayer {
   name: string
   color: string
+  /** Valfri emoji vid huvudet (tom sträng = standardprick) */
+  avatar: string
   x: number
   y: number
   angle: number
@@ -255,6 +273,7 @@ export interface ViewState {
   targetScore: number
   freshTrail: FreshSegment[]
   freshHoles: Hole[]
+  freshPickups: PickupEvent[]
   roundWinner: number | null
   matchWinner: number | null
 }
@@ -306,6 +325,7 @@ export function derivedStats(p: { effects: Effect[] }): DerivedStats {
         break
       case 'star':
         star = true
+        speed *= 1.7 // stjärnan gör dig blixtsnabb också — den trumfar allt
         break
       case 'shield':
         shield = true

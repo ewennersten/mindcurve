@@ -45,6 +45,8 @@ interface Client {
   ws: WebSocket
   slot: number
   name: string
+  /** Valfri emoji vid masken */
+  avatar: string
   ready: boolean
   input: PlayerInput
   /** Index i game.players under pågående match, annars -1 */
@@ -61,7 +63,7 @@ let powerupsEnabled = true
 let disabledPowerups: PowerUpType[] = []
 let botLevel = DEFAULT_BOT_LEVEL
 let targetScore: GameSettings['targetScore'] = 'auto'
-let shrinkAfterSec: GameSettings['shrinkAfterSec'] = 120
+let shrinkAfterSec: GameSettings['shrinkAfterSec'] = 30
 let game: GameState | null = null
 let participants: Client[] = []
 let phaseTimer = 0
@@ -87,7 +89,7 @@ function broadcast(msg: ServerMsg): void {
 function broadcastLobby(): void {
   const players: LobbyPlayer[] = [...clients, ...botPlayers]
     .sort((a, b) => a.slot - b.slot)
-    .map((c) => ({ slot: c.slot, name: c.name, ready: c.ready, bot: c.bot }))
+    .map((c) => ({ slot: c.slot, name: c.name, avatar: c.avatar, ready: c.ready, bot: c.bot }))
   broadcast({
     t: 'lobby',
     players,
@@ -120,6 +122,7 @@ wss.on('connection', (ws) => {
     ws,
     slot,
     name: `Spelare ${slot + 1}`,
+    avatar: '',
     ready: false,
     input: { left: false, right: false },
     playerIndex: -1,
@@ -139,6 +142,10 @@ wss.on('connection', (ws) => {
     switch (msg.t) {
       case 'name':
         client.name = String(msg.name).trim().slice(0, 12) || client.name
+        broadcastLobby()
+        break
+      case 'avatar':
+        client.avatar = String(msg.avatar).trim().slice(0, 8)
         broadcastLobby()
         break
       case 'ready':
@@ -172,6 +179,7 @@ wss.on('connection', (ws) => {
           ws: null as unknown as WebSocket, // används aldrig — bots broadcastas inte till
           slot: botSlot,
           name: BOT_NAMES[botSlot % BOT_NAMES.length],
+          avatar: '🤖',
           ready: true,
           input: { left: false, right: false },
           playerIndex: -1,
@@ -238,7 +246,7 @@ function maybeStart(): void {
   participants = [...ready, ...botPlayers].sort((a, b) => a.slot - b.slot)
   participants.forEach((c, i) => (c.playerIndex = i))
   game = createGame(
-    participants.map((c) => ({ name: c.name, color: PLAYER_COLORS[c.slot] })),
+    participants.map((c) => ({ name: c.name, color: PLAYER_COLORS[c.slot], avatar: c.avatar })),
     Date.now() >>> 0,
     { powerupsEnabled, disabledPowerups, targetScore, shrinkAfterSec },
   )

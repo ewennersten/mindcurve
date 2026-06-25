@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createGame, startRound, step } from './core'
 import { ALL_POWERUP_TYPES, MINE_ARM_TICKS, applyPowerUp, spawnPowerUp } from './powerups'
-import { type GameState, type PlayerInput, type PowerUpType, FIELD_H, FIELD_W, PLAYER_COLORS } from './state'
+import { type GameState, type PlayerInput, type PowerUpType, FIELD_H, FIELD_W, PLAYER_COLORS, TPS } from './state'
 
 const TWO_PLAYERS = [
   { name: 'A', color: '#f00' },
@@ -550,10 +550,45 @@ describe('rundor och poäng', () => {
       { left: false, right: false },
     ]
     // Lägg en power-up rakt framför spelare 0
-    g.powerups.push({ id: g.nextId++, type: 'selfThin', x: g.players[0].x + 30, y: g.players[0].y })
+    g.powerups.push({ id: g.nextId++, type: 'selfThin', x: g.players[0].x + 30, y: g.players[0].y, ttl: TPS * 12 })
     for (let t = 0; t < 30 && g.powerups.length > 0; t++) step(g, none)
     expect(g.players[0].matchStats.powerups).toBe(1)
     expect(g.players[1].matchStats.powerups).toBe(0)
+  })
+
+  it('power-ups despawnar efter sin livslängd utan att räknas som plockade', () => {
+    const g = freshPlayingState()
+    g.settings.powerupsEnabled = true
+    g.powerups = []
+    // Långt från båda huvudena, kort ttl → självdör innan någon når den
+    g.powerups.push({ id: g.nextId++, type: 'selfThin', x: 900, y: 400, ttl: 3 })
+    const none: PlayerInput[] = [
+      { left: false, right: false },
+      { left: false, right: false },
+    ]
+    for (let t = 0; t < 5; t++) step(g, none)
+    expect(g.powerups.length).toBe(0)
+    expect(g.players.reduce((s, p) => s + p.matchStats.powerups, 0)).toBe(0)
+    expect(g.freshPickups.length).toBe(0) // despawn ger ingen plockhändelse
+  })
+
+  it('plock ger en freshPickup-händelse med rätt plockare och typ', () => {
+    const g = freshPlayingState()
+    g.settings.powerupsEnabled = true
+    g.powerups = []
+    g.powerups.push({ id: g.nextId++, type: 'selfThin', x: g.players[0].x + 12, y: g.players[0].y, ttl: TPS * 12 })
+    const none: PlayerInput[] = [
+      { left: false, right: false },
+      { left: false, right: false },
+    ]
+    let ev: GameState['freshPickups'][number] | undefined
+    for (let t = 0; t < 20 && !ev; t++) {
+      step(g, none)
+      ev = g.freshPickups[0]
+    }
+    expect(ev).toBeDefined()
+    expect(ev?.by).toBe(0)
+    expect(ev?.type).toBe('selfThin')
   })
 
   it('matchstatistik nollställs inte mellan rundor', () => {

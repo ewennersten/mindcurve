@@ -16,13 +16,38 @@
   display: none !important;
 }
 
+/* Lobbyns liv (entré-stagger, radar-puls, andande masker) är dekor — stäng av
+   helt för den som bett om mindre rörelse. */
+@media (prefers-reduced-motion: reduce) {
+  .lobby-head,
+  .title-row .logo,
+  .slot,
+  .slot.open .swatch {
+    animation: none !important;
+  }
+}
+
 html,
 body {
   margin: 0;
   height: 100%;
-  background: var(--bg);
+  background-color: var(--bg);
   color: var(--ink);
   overflow: hidden;
+}
+
+/* Levande arena-bakgrund: en svag prickmatris (spelplanen), en varm
+   "signal"-glöd som strålar ut från radar-loggan, och en vinjett som
+   sänker kanterna. Allt lågkontrast så lobbyn ovanpå förblir läsbar. */
+body {
+  background-image:
+    radial-gradient(58% 46% at 50% 27%, oklch(0.66 0.2 52 / 0.16), transparent 70%),
+    radial-gradient(130% 118% at 50% 42%, transparent 52%, oklch(0.09 0.02 300 / 0.6)),
+    radial-gradient(oklch(0.52 0.03 300 / 0.16) 1px, transparent 1.6px);
+  background-size:
+    100% 100%,
+    100% 100%,
+    24px 24px;
 }
 
 kbd {
@@ -73,16 +98,36 @@ kbd {
 }
 
 .title-row .logo {
-  width: clamp(3rem, 8vw, 5.6rem);
+  width: clamp(3.2rem, 8.5vw, 6.2rem);
   height: auto;
+  /* Radar-loggan andas — den sänder ut en signal precis som bakgrundsglöden */
+  animation: radar 3.6s ease-in-out infinite;
+}
+
+@keyframes radar {
+  50% {
+    transform: scale(1.045);
+    filter: drop-shadow(0 0 16px oklch(0.66 0.2 52 / 0.55));
+  }
+}
+
+.lobby-head {
+  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .lobby-head h1 {
   font-family: 'Tilt Neon', cursive;
-  font-size: clamp(3rem, 9vw, 6.5rem);
+  font-size: clamp(3.4rem, 11vw, 8rem);
   margin: 0;
-  line-height: 0.95;
-  letter-spacing: 0.02em;
+  line-height: 0.9;
+  letter-spacing: -0.005em;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
 }
 
 .lobby-head .bang {
@@ -111,12 +156,58 @@ kbd {
   gap: 0.7rem;
   min-height: 11rem;
   position: relative;
-  transition: border-color 0.18s ease-out;
+  overflow: hidden;
+  transition:
+    border-color 0.18s ease-out,
+    background 0.18s ease-out,
+    box-shadow 0.18s ease-out,
+    transform 0.18s ease-out;
+  /* Platserna monteras in i tur och ordning — festen samlas */
+  animation: slot-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.slot:nth-child(1) {
+  animation-delay: 0.08s;
+}
+.slot:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.slot:nth-child(3) {
+  animation-delay: 0.24s;
+}
+.slot:nth-child(4) {
+  animation-delay: 0.32s;
+}
+.slot:nth-child(5) {
+  animation-delay: 0.4s;
+}
+.slot:nth-child(6) {
+  animation-delay: 0.48s;
+}
+.slot:nth-child(7) {
+  animation-delay: 0.56s;
+}
+.slot:nth-child(8) {
+  animation-delay: 0.64s;
+}
+
+@keyframes slot-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+/* Ansluten plats äger sin färg: tonad panel, färgad ram och en matchande
+   glöd som lyfter rutan från bakgrunden. */
 .slot.joined {
-  border-color: color-mix(in oklch, var(--c) 70%, transparent);
-  background: color-mix(in oklch, var(--c) 6%, var(--bg-raised));
+  border-color: color-mix(in oklch, var(--c) 85%, transparent);
+  background:
+    radial-gradient(140% 90% at 0% 0%, color-mix(in oklch, var(--c) 22%, transparent), transparent 60%),
+    var(--bg-raised);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklch, var(--c) 30%, transparent),
+    0 16px 42px -20px color-mix(in oklch, var(--c) 75%, transparent);
 }
 
 .slot.open {
@@ -129,19 +220,50 @@ kbd {
 }
 
 .slot.open:hover {
-  border-color: color-mix(in oklch, var(--c) 60%, var(--line));
+  border-color: color-mix(in oklch, var(--c) 70%, var(--line));
+  background: color-mix(in oklch, var(--c) 8%, transparent);
+  transform: translateY(-2px);
 }
 
+/* Färgmarkören är en mask: ett spår som tonar in i färgen med ett lysande
+   maskhuvud i änden — exakt det du styr på planen. */
 .swatch {
-  width: 2rem;
-  height: 0.6rem;
+  position: relative;
+  width: 3.4rem;
+  height: 0.55rem;
   border-radius: 99px;
-  background: var(--c);
+  background: linear-gradient(90deg, transparent, var(--c));
   flex-shrink: 0;
+  overflow: visible;
 }
 
+.swatch::after {
+  content: '';
+  position: absolute;
+  right: -0.12rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.92rem;
+  height: 0.92rem;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 11px color-mix(in oklch, var(--c) 85%, transparent);
+}
+
+/* Öppen plats: en vilande "spök-mask" som andas och bjuder in */
 .slot.open .swatch {
-  opacity: 0.45;
+  opacity: 0.4;
+  animation: worm-breathe 2.4s ease-in-out infinite;
+}
+
+.slot.open:hover .swatch {
+  opacity: 1;
+}
+
+@keyframes worm-breathe {
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .join-hint {
@@ -164,6 +286,25 @@ kbd {
 .slot .name:focus {
   outline: none;
   border-bottom-color: var(--c);
+}
+
+/* Emoji-fält (avatar vid masken) — kompakt, centrerat, i lobbyn och LAN-lobbyn */
+.avatar-input {
+  font: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  width: 3.4rem;
+  text-align: center;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 0.25rem 0.3rem;
+}
+
+.avatar-input:focus {
+  outline: none;
+  border-color: var(--c, var(--ink-dim));
 }
 
 .keys {
@@ -401,25 +542,32 @@ kbd {
 .start-btn {
   font: inherit;
   font-weight: 700;
-  font-size: 1.05rem;
-  letter-spacing: 0.06em;
-  color: var(--bg);
-  background: var(--ink);
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+  color: oklch(0.2 0.04 50);
+  background: linear-gradient(135deg, #ff9d42, #ee7623);
   border: none;
   border-radius: 10px;
-  padding: 0.75rem 1.6rem;
+  padding: 0.8rem 1.7rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  transition: transform 0.12s ease-out;
+  box-shadow: 0 10px 30px -10px oklch(0.66 0.2 52 / 0.7);
+  transition:
+    transform 0.12s ease-out,
+    box-shadow 0.12s ease-out;
 }
 
 .start-btn:hover:not(:disabled) {
   transform: translateY(-2px);
+  box-shadow: 0 16px 38px -10px oklch(0.66 0.2 52 / 0.85);
 }
 
 .start-btn:disabled {
+  color: var(--bg);
+  background: var(--ink);
+  box-shadow: none;
   opacity: 0.35;
   cursor: default;
 }
